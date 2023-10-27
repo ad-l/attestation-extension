@@ -1,0 +1,20 @@
+{
+  "name": "confidential-gpu-vm-attestation",
+  "version": "0.0.1",
+  "description": "A sample browser extension to verify a client is connected to a confidential GPU VM and encrypt data",
+  "license": "MIT",
+  "scripts": {
+    "dev": "webextension-toolbox dev edge",
+    "build": "webextension-toolbox build",
+    "build:config": "webextension-toolbox build --config ./webext.config.js"
+  },
+  "browserslist": [
+    "chrome >= 17",
+    "edge >= 15",
+    "firefox >= 52",
+    "opera >= 15"
+  ],
+  "devDependencies": {
+    "webextension-toolbox": "^3.0.0"
+  }
+}

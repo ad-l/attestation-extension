@@ -1,0 +1,22 @@
+{
+  "manifest_version": 2,
+  "name": "Confidential GPU VM Attestation Helper",
+  "description": "This sample extension shows how to verify the attestation of a remote confidential GPU VM and encrypt data that can only be decrypted on the isolated VM.",
+  "version": "0.0.1",
+  "default_locale": "en",
+  "permissions": [
+    "bookmarks",
+    "tabs",
+    "xmlhttprequest",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_icon": "icons/action.png",
+    "default_title": "Attestation Status"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
