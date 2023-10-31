@@ -4,7 +4,7 @@
   "description": "A sample browser extension to verify a client is connected to a confidential GPU VM and encrypt data",
   "license": "MIT",
   "scripts": {
-    "dev": "webextension-toolbox dev edge",
+    "dev": "webextension-toolbox dev edge --config ./webext.config.js",
     "build": "webextension-toolbox build",
     "build:config": "webextension-toolbox build --config ./webext.config.js"
   },
@@ -16,5 +16,10 @@
   ],
   "devDependencies": {
     "webextension-toolbox": "^3.0.0"
+  },
+  "dependencies": {
+    "hpke-js": "^1.2.3",
+    "jose": "^5.0.1",
+    "jquery": "^3.7.1"
   }
 }

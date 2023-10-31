@@ -1,0 +1,52 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="popup.css"/>
+    <script type="text/javascript" src="jquery.js"></script>
+    <title>Website Attestation Status</title>
+  </head>
+
+  <body>
+    <h1>Attestation Information: <span id="name"></span></h1>
+    <div id="caution"></div>
+    <div>
+    <div id="cpu">
+      <div id="cputop">
+        CPU Attestation Claims
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th width="100">Claim</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="cpuclaims">
+
+        </tbody>
+      </table>
+    </div>
+    <div id="gpu">
+      <div id="gputop">
+        GPU Attestation Claims
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th width="100">Claim</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="gpuclaims">
+
+        </tbody>
+      </table>
+    </div>
+    </div>
+    <div id="error"></div>
+    <div id="config"><button id="go-to-options">Configure trusted websites</button></div>
+    <script src="popup.js"></script>
+  </body>
+</html>

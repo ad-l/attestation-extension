@@ -1,0 +1,42 @@
+body {
+    background: #efefef;
+}
+
+h1 {
+    font-size: 22pt;
+}
+
+table {
+    width: 100%;
+}
+
+td {
+    border: 1px solid gray;
+}
+
+input[type=text] {
+    width: 600px;
+}
+select {
+    width: 300px;
+}
+
+textarea {
+    width: 600px;
+    height: 200px;
+}
+
+#container {
+    width: 100%;
+    max-width: 960px !important;
+    margin: auto;
+    font-family: sans-serif;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+#status {
+    text-color: red;
+}
