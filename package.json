@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "webextension-toolbox dev edge --config ./webext.config.js",
-    "build": "webextension-toolbox build",
+    "build": "webextension-toolbox build --config ./webext.config.js",
     "build:config": "webextension-toolbox build --config ./webext.config.js"
   },
   "browserslist": [

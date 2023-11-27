@@ -2,28 +2,75 @@ import * as jose from 'jose'
 
 window.cache = {};
 
-function evalPolicy(policy, claims)
-{
+// FIXME Maybe use the SKR policy language instead?
+// This is called by the action popup to show which claims are met or not
+window.evalClaim = function(policy, claim) {
+  var cmp; for(cmp in policy);
+  var val = policy[cmp];
+  console.log(`EVAL('${claim}', '${cmp}', '${val}')`)
+  if(cmp == "="){
+    if(claim == val || val == "$WEBSITE_PUBLIC_KEY$") return true;
+  } else if (cmp == "<=" || cmp == ">=") {
+    if(claim == val) return true;
+    if(/^([0-9]+)([.][0-9]+)+$/.test(val)) {
+      val = val.split(".");
+      if(claim.split(".").every((v, i) => {
+        if(!val[i]) return true;
+        return (cmp == "<=" ? Number(v) <= Number(val[i]) : Number(v) >= Number(val[i]));
+      })) return true;
+    }
+    else if(cmp == "<=" ? claim < val : claim > val) return true;
+  }
+  return false;
+}
+
+function evalPolicy(policy, claims) {
   for(var c in policy) {
     if(!(c in claims)) return false;
-    var cmp; for(cmp in policy[c]);
-    console.log(`EVAL('${claims[c]}', '${cmp}', '${policy[c][cmp]}')`)
-    if(cmp == "="){
-      if(claims[c] != policy[c][cmp] && policy[c][cmp] != "$WEBSITE_PUBLIC_KEY$") return false;
-    } else if (cmp == "<=") {
-      if(claims[c] > policy[c][cmp]) return false;
-    } else if (cmp == ">=") {
-      if(claims[c] < policy[c][cmp]) return false;
-    }
+    if(!evalClaim(policy[c], claims[c])) return false;
   }
   return true;
 }
 
-async function add(origin)
-{
-  if(cache[origin]) return;
-  cache[origin] = {pending: 1};
-  var tokens = {};
+async function readLocalStorage(key) {
+  return new Promise((resolve, reject) => {
+    console.log("STORE GET "+key)
+    chrome.storage.sync.get(null, function (result) {
+      console.log("RES: ")
+      console.dir(result);
+      console.log(result[key]);
+      if (result[key] === undefined) {
+        reject(new Error("Not in cache"));
+      } else {
+        resolve(result[key]);
+      }
+    });
+  });
+}
+
+async function add(origin) {
+  console.log("Checking attestation for "+origin)
+
+  if(cache[origin]){
+    if(!cache[origin].ts || Date.now() - cache[origin].ts > 1000*60*5) {
+       console.log("Re-checking website "+origin);
+       delete cache[origin];
+    }else{
+      console.log("Website has been checked recently, using cache");
+      return cache[origin];
+    }
+  }
+  cache[origin] = {pending: 1, ts: Date.now()};
+  var tokens = {gpu_trusted:false, cpu_trusted:false, site_trusted:false,
+    cpu_policy:"{}", gpu_policy: "{}", cpu_policy_pass: false, gpu_policy_pass:false, ts:Date.now()};
+
+  // Try to find the origin in the stored configuration
+  let site_config = {};
+  try {
+    console.log("GET "+origin);
+    site_config = await readLocalStorage(origin);
+    tokens.site_trusted = true;
+  } catch(e) {console.log("Failed to check config for "+origin+": "+e)}
 
   try {
     const atr = await fetch(origin+"/attest", {
@@ -32,26 +79,35 @@ async function add(origin)
       cache: "no-cache"
     });
 
-    tokens = await atr.json();
-    tokens.cpu_claims = jose.decodeJwt(tokens.cpu);
-    tokens.gpu_claims = jose.decodeJwt(tokens.gpu);
-    tokens.site_trusted = false;
+    const t = await atr.json();
+    for(var i in t) tokens[i] = t[i];
   } catch(e) {
     delete cache[origin];
-    return;
+    return tokens;
   }
 
-  // Try to find the origin in the stored configuration
-  chrome.storage.sync.get([origin], x => {
-    if(!(origin in x)) return false;
-    x = x[origin];
-    tokens.site_trusted = true;
+  try {
+    tokens.cpu_claims = jose.decodeJwt(tokens.cpu);
+  }catch(e) {
+    tokens.cpu_claims = {};
+  }
 
+  try{
+    tokens.gpu_claims = jose.decodeJwt(tokens.gpu);
+  } catch(e) {
+    tokens.gpu_claims = {};
+  }
+
+  if(tokens.site_trusted) {
     // GPU token is easy (keys are standard JWKS)
-    const gpukeys = jose.createRemoteJWKSet(new URL(x.gpu_jwks));
-    jose.jwtVerify(tokens.gpu, gpukeys, {clockTolerance: "1 hour"})
-    .then(x => {tokens.gpu_trusted = true;})
-    .catch(e => {console.dir(e); tokens.gpu_trusted = false;})
+    const gpukeys = jose.createRemoteJWKSet(new URL(site_config.gpu_jwks));
+    try {
+      await jose.jwtVerify(tokens.gpu, gpukeys, {clockTolerance: "1 hour"});
+      tokens.gpu_trusted = true;
+    }catch(e){
+      console.dir(e);
+      tokens.gpu_trusted = false;
+    }
 
     /** FIXME
     // CPU is painful, must convert from x5c
@@ -66,20 +122,42 @@ async function add(origin)
       .then(x => {tokens.cpu_trusted = true;})
       .catch(e => {console.dir(e); tokens.cpu_trusted = false;})
     */
-     tokens.cpu_trusted = true;
-     tokens.cpu_policy = x.cpu_policy;
-     tokens.gpu_policy = x.gpu_policy;
+    tokens.cpu_trusted = true;
+    tokens.cpu_policy = site_config.cpu_policy;
+    tokens.gpu_policy = site_config.gpu_policy;
 
-     tokens.cpu_policy_pass = evalPolicy(JSON.parse(x.cpu_policy), tokens.cpu_claims);
-     tokens.gpu_policy_pass = evalPolicy(JSON.parse(x.gpu_policy), tokens.gpu_claims);
-  });
+    tokens.cpu_policy_pass = evalPolicy(JSON.parse(site_config.cpu_policy), tokens.cpu_claims);
+    tokens.gpu_policy_pass = evalPolicy(JSON.parse(site_config.gpu_policy), tokens.gpu_claims);
+  } else {
+    tokens.cpu_trusted = false;
+    tokens.gpu_trusted = false;
+  }
 
   console.dir(tokens);
   cache[origin] = tokens;
+  updateIcon(origin);
+  return tokens;
 }
 
-async function handleTabChange (tabs) {
+async function updateIcon(o)
+{
+  if(typeof cache[o] == "object")
+  {
+    if(cache[o].site_trusted){
+      const trusted = cache[o].cpu_trusted && cache[o].gpu_trusted && cache[o].cpu_policy_pass && cache[o].gpu_policy_pass;
+      return await chrome.browserAction.setIcon({path:"icons/"+(trusted ? "attested" : "danger")+".png"});
+    }
+  }
+  await chrome.browserAction.setIcon({path: "icons/action.png"});
+}
 
+async function handleTabChange () {
+  let tabs = await browser.tabs.query({active: true, currentWindow: true});
+  if(!tabs.length || !tabs[0].url) return;
+  try {
+    let u = new URL(tabs[0].url);
+    updateIcon(u.origin);
+  }catch(e){}
 }
 
 // listen to tab URL changes
@@ -98,8 +176,11 @@ handleTabChange()
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
     if (request.init) {
-      add(sender.origin);
-      return;
+      add(sender.origin).then(x => {
+        console.log("Sending event to injected script "+x)
+        sendResponse(x);
+      });
+      return true;
     }
   }
 );

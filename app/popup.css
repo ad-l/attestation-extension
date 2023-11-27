@@ -59,11 +59,17 @@ h1 {
 }
 
 #gpu table, #cpu table {
-  width: 330px;
+  width: 320px;
   font-size: 8pt;
   border-radius:50%;
   table-layout: fixed;
   border-spacing: 0px;
+}
+
+textarea {
+  width:95%;
+  background: none;
+  font-size: 7pt;
 }
 
 #cpuclaims, #gpuclaims {
@@ -89,5 +95,15 @@ thead > tr {
 #config {
   position: fixed;
   right: 10px;
+  bottom: 10px;
+}
+
+#emsg {
+  display: none;
+  position: fixed;
+  color:#330000;
+  font-size: 10pt;
+  padding: 4px;
+  left: 10px;
   bottom: 10px;
 }

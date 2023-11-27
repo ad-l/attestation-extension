@@ -44,12 +44,16 @@
             <td>GPU Attestation Policy</td>
             <td><textarea id="gpu_policy">
 {
+    "x-nvidia-ver": {"=":"1.0"},
     "x-nvidia-attestation-type": {"=":"GPU"},
     "x-nvidia-gpu-manufacturer":{"=":"NVIDIA Corporation"},
+    "dbgstat" : {"=":"disabled"},
+    "secboot": {"=":true},
     "hwmodel": {"=":"GH100 A01 GSP BROM"},
+    "oemid": {"=":"5703"},
     "measres": {"=":"comparison-successful"},
     "x-nvidia-gpu-vbios-version": {">=":"96.00.5E.00.01"},
-    "x-nvidia-gpu-driver-version": {">=":"535.104.05"},
+    "x-nvidia-gpu-driver-version": {">=":"535.86.10"},
     "eat_nonce": {"=":"$WEBSITE_PUBLIC_KEY$"}
 }
             </textarea></td>
@@ -62,6 +66,7 @@
         <option value="">(new website)</option>
       </select>
       <button id="remove">Remove Website</button>
+      <button id="reset">Reset</button>
     </form>
     <div id="status"></div>
     </div>

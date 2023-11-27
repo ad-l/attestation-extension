@@ -1,4 +1,5 @@
 var $ = require('jquery');
+const ext = browser.extension.getBackgroundPage();
 
 async function restoreOptions(){
   $("#websites").empty().append($("<option>(new website)</option>"));
@@ -13,7 +14,7 @@ async function restoreOptions(){
 function loadConfig(e) {
     const o = $("#websites").val();
     if(!o) return;
-    chrome.storage.sync.get([o], x => {
+    chrome.storage.sync.get(o, x => {
         var i; for(i in x);
         x = x[i];
         $("#origin").val(x.origin);
@@ -26,14 +27,23 @@ function loadConfig(e) {
 }
 
 function addConfig(e) {
+    var origin;
+    try {
+      origin = new URL($("#origin").val()).origin;
+    }catch(e){
+      alert("Invalid origin!");
+      return false;
+    }
+
     let ws = {
-      origin: $("#origin").val(),
+      origin: origin,
       cpu_jwks: $("#cpu_jwks").val(),
       cpu_policy: $("#cpu_policy").val(),
       gpu_jwks: $("#gpu_jwks").val(),
       gpu_policy: $("#gpu_policy").val()
     };
     let upd = {}; upd[ws.origin] = ws;
+    ext.cache = {};
     chrome.storage.sync.set(upd, () => {
       $("#form").trigger("reset");
       restoreOptions();
@@ -51,6 +61,14 @@ $("#remove").on('click', async e => {
       $("#form").trigger("reset");
       restoreOptions();
     }
+    ext.cache = {};
+});
+
+$("#reset").on('click', async e => {
+    chrome.storage.sync.clear();
+    ext.cache = {};
+    restoreOptions();
+    alert("All your trusted websites have been removed!");
 });
 
 $("#save").on('click', addConfig);

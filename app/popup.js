@@ -11,10 +11,15 @@ function fill_table(t, claims, policy)
     if(c in policy) {
       var op; for(op in policy[c]);
       tr.append($("<td></td>").append($("<b></b>").text(c)));
-      tr.append($("<td></td>").append($("<abbr></abbr>").attr("title",op+" "+policy[c][op]).text(claims[c])));
+      const hint = $("<abbr></abbr>").attr("title",op+" "+policy[c][op]).text(claims[c]);
+      if(!ext.evalClaim(policy[c], claims[c])) hint.css("color","#c00").css("font-weight","bold").css("text-decoration","line-through");
+      tr.append($("<td></td>").append(hint));
     }else {
       tr.append($("<td></td>").text(c));
-      tr.append($("<td></td>").text(claims[c]));
+      if(typeof claims[c] == "object")
+        tr.append($("<td></td>").append($("<textarea></textara>").val(JSON.stringify(claims[c])))); 
+      else
+        tr.append($("<td></td>").text(claims[c]));
     }
     t.append(tr);
   }
@@ -28,25 +33,27 @@ async function init(e){
   if(ext.cache[url.origin]) {
     $("#error").hide();
     const o = ext.cache[url.origin];
+    console.dir(o);
+
     if(o.pending) {
       $("#error").show().text("Attestation checking in progress...");
       setTimeout(()=>{location.reload()}, 1000);
       return;
     }
     let warn = x => {
-      $("#warn").show().text(x);
+      $("#emsg").show().text(x);
       $("html,body").css("background","#ffddcc");
     };
     let fatal = x => {
-      $("#warn").show().text(x);
+      $("#emsg").show().text(x);
       $("html,body").css("background","#ff9999");
     };
     if(o.site_trusted){
       if(!o.cpu_trusted){fatal("Failed to verify CPU attestation")}
-      else if(!o.cpu_policy_pass){fatal("CPU attestation policy failed")}
+      else if(!o.cpu_policy_pass){fatal("CPU attestation policy failed. Check table for mismatches.")}
       if(!o.gpu_trusted){fatal("Failed to verify GPU attestation")}
-      else if(!o.cpu_policy_pass){fatal("GPU attestation policy failed")}
-      else{ $("html,body").css("background","#c2f0c2"); }
+      else if(!o.gpu_policy_pass){fatal("GPU attestation policy failed. Check table for mismatches.")}
+      else{ $("html,body").css("background","#c2f0c2"); $("#emsg").show().text("Attestations are valid and all policies are met.").css("color","#030");}
     } else {
       warn("This website is attested but you have not set a policy to trust it.")
     }
